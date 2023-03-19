@@ -1,4 +1,4 @@
-PROJ_NAME = dictgen
+PROJ_NAME = gndict
 
 VERSION = $(shell git describe --tags)
 VER = $(shell git describe --tags --abbrev=0)

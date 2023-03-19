@@ -1,4 +1,4 @@
-package dictgen
+package gndict
 
 var (
 	Version = "v0.0.1"
