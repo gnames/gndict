@@ -83,7 +83,8 @@ func (d *downloaderio) getNames(dat *data.Data) error {
 	        JOIN data_sources ds
 	            ON ds.id = nsi.data_source_id
 	    WHERE ds.is_curated = true
-			OR ds.is_auto_curated = true
+			OR nsi.data_source_id = 11
+			OR nsi.data_source_id = 12
 `
 	rows, err := d.db.Query(context.Background(), q)
 	if err != nil {
