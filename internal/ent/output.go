@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -95,7 +96,7 @@ func (o *Output) uninomials() error {
 		}
 	}
 	for _, v := range [][]string{white, grey} {
-		sort.Strings(v)
+		slices.Sort(v)
 	}
 	return o.saveUniOrSp(white, grey, "uninomials.csv")
 
