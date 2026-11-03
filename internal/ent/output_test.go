@@ -25,10 +25,11 @@ func (fs fakeSys) ReadFile(path string) ([]string, error) {
 
 func newFakeSys() fakeSys {
 	return fakeSys{
-		"uninomials.csv": {"Plantaginaceae,12", "Minimi,1"},
-		"genera.csv":     {"Plantago,40", "America,3", `"Odd,Name",1`},
-		"species.csv":    {"plantaginea,7", "amabilis,4", "all,2"},
-		"canonicals.csv": {"America amabilis", "Plantago major"},
+		"uninomials.csv":      {"Plantaginaceae,12", "Minimi,1", "Monterosato,1"},
+		"uninomials-weak.txt": {"Monterosato"},
+		"genera.csv":          {"Plantago,40", "America,3", `"Odd,Name",1`},
+		"species.csv":         {"plantaginea,7", "amabilis,4", "all,2"},
+		"canonicals.csv":      {"America amabilis", "Plantago major"},
 	}
 }
 
@@ -59,6 +60,8 @@ func TestHashDict(t *testing.T) {
 	}{
 		{"Plantago", hashdict.InGenus},
 		{"Plantaginaceae", hashdict.InUninomial},
+		// weakly supported author's name is an ambiguous uninomial
+		{"Monterosato", hashdict.InAmbigUninomial},
 		{"plantaginea", hashdict.InSpecies},
 		// America is a common word, so it is an ambiguous genus
 		{"America", hashdict.InAmbigGenus},
@@ -71,6 +74,7 @@ func TestHashDict(t *testing.T) {
 		assert.True(d.Lookup(v.word).Has(v.flags), v.word)
 	}
 	assert.False(d.Lookup("Plantago").Has(hashdict.CommonWord))
+	assert.False(d.Lookup("Monterosato").Has(hashdict.InUninomial))
 	assert.Equal(hashdict.Flags(0), d.Lookup("Notawordatall"))
 	assert.Equal(hashdict.Flags(0), d.Lookup(""))
 }

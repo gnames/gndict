@@ -2,6 +2,7 @@ package downloaderio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	names  = "names.txt"
-	genera = "genera.txt"
+	names      = "names.txt"
+	genera     = "genera.txt"
+	weakAuthor = "uninomials-weak.txt"
 )
 
 type downloaderio struct {
@@ -62,6 +64,77 @@ func (d *downloaderio) Download(dat *data.Data) error {
 	if err != nil {
 		return err
 	}
+
+	log.Info().Msg("Starting creation of weak uninomials dump.")
+	err = d.getWeakUninomials()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// getWeakUninomials saves one-word names that are weakly supported and are
+// also used as authors' names. They are often artifacts: an author in
+// parentheses parsed as a subgenus (`Anisocycla (Monterosato)`), or a place
+// or a person in a data source (`Missouri`). A name is weakly supported if
+// it comes from only one data source, or never starts a name-string (it is
+// known only as a subgenus).
+func (d *downloaderio) getWeakUninomials() error {
+	path := filepath.Join(d.cfg.CacheDir, weakAuthor)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	q := `
+WITH uni AS (
+  SELECT c.name,
+    count(DISTINCT nsi.data_source_id) AS sources,
+    count(DISTINCT nsi.data_source_id) FILTER (
+      WHERE ns.name = c.name OR ns.name LIKE c.name || ' %'
+    ) AS head_sources
+  FROM canonicals c
+    JOIN name_strings ns ON ns.canonical_id = c.id
+    JOIN name_string_indices nsi ON nsi.name_string_id = ns.id
+    JOIN data_sources ds ON ds.id = nsi.data_source_id
+  WHERE (ds.is_curated = true
+      OR nsi.data_source_id = 11
+      OR nsi.data_source_id = 12
+      OR nsi.data_source_id = 206)
+    AND position(' ' in c.name) = 0
+  GROUP BY c.name
+)
+SELECT u.name
+  FROM uni u
+  WHERE (u.sources = 1 OR u.head_sources = 0)
+    AND EXISTS (
+      SELECT 1 FROM words w
+        -- type 4 is an author word
+        WHERE w.normalized = u.name AND w.type_id = 4
+    )
+  ORDER BY u.name`
+	rows, err := d.db.Query(context.Background(), q)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var name string
+	var count int
+	for rows.Next() {
+		err = rows.Scan(&name)
+		if err != nil {
+			return err
+		}
+		_, err = f.WriteString(name + "\n")
+		if err != nil {
+			return err
+		}
+		count++
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	log.Info().Msgf("Downloaded %d weak uninomials.", count)
 	return nil
 }
 
@@ -136,13 +209,14 @@ SELECT DISTINCT c.name
     FROM name_string_indices nsi
         JOIN name_strings ns on ns.id = nsi.name_string_id
         JOIN canonicals c on c.id = ns.canonical_id
-    WHERE data_source_id = 181 AND RANK = 'Genus' `
+    WHERE data_source_id = 181 AND lower(rank) = 'genus'`
 	rows, err := d.db.Query(context.Background(), q)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	var name string
+	var count int
 	for rows.Next() {
 		err = rows.Scan(&name)
 		if err != nil {
@@ -152,8 +226,18 @@ SELECT DISTINCT c.name
 		if err != nil {
 			return err
 		}
+		count++
+	}
+	if err = rows.Err(); err != nil {
+		return err
 	}
 
+	// without IRMNG genera all genera would come only from binomials
+	if count == 0 {
+		_ = os.Remove(path)
+		return errors.New("no IRMNG genera found in the database")
+	}
+	log.Info().Msgf("Downloaded %d IRMNG genera.", count)
 	return nil
 }
 
@@ -165,7 +249,9 @@ func getURL(cfg config.Config) string {
 func (d *downloaderio) downloadHappened() bool {
 	names := filepath.Join(d.cfg.CacheDir, "names.txt")
 	genera := filepath.Join(d.cfg.CacheDir, "genera.txt")
+	weak := filepath.Join(d.cfg.CacheDir, weakAuthor)
 	namesExist, _ := gnsys.FileExists(names)
 	generaExist, _ := gnsys.FileExists(genera)
-	return namesExist && generaExist
+	weakExist, _ := gnsys.FileExists(weak)
+	return namesExist && generaExist && weakExist
 }

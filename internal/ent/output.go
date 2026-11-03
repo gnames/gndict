@@ -96,13 +96,18 @@ func (o *Output) uninomials() error {
 	if err != nil {
 		return err
 	}
+	weak, err := o.weakUninomials()
+	if err != nil {
+		err = fmt.Errorf("-> o.weakUninomials: %w", err)
+		return err
+	}
 
 	for _, v := range lines {
 		name, _, _ := strings.Cut(v, ",")
 		if o.uninomialProblems(name) {
 			continue
 		}
-		if o.isGreyWord(name) {
+		if _, ok := weak[name]; ok || o.isGreyWord(name) {
 			grey = append(grey, v)
 		} else {
 			white = append(white, v)
@@ -115,6 +120,20 @@ func (o *Output) uninomials() error {
 	o.addWords(grey, hashdict.InAmbigUninomial)
 	return o.saveUniOrSp(white, grey, "uninomials.csv")
 
+}
+
+// weakUninomials returns weakly supported uninomials that are also used as
+// authors' names. They are saved as ambiguous uninomials.
+func (o *Output) weakUninomials() (map[string]struct{}, error) {
+	lines, err := o.sys.ReadFile("uninomials-weak.txt")
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]struct{}, len(lines))
+	for _, v := range lines {
+		res[v] = struct{}{}
+	}
+	return res, nil
 }
 
 func (o *Output) saveUniOrSp(white, grey []string, file string) error {
