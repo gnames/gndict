@@ -1,6 +1,7 @@
 package ent
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/gnames/gndict/internal/ent/data"
 	"github.com/gnames/gndict/pkg/config"
+	"github.com/gnames/gnfinder/pkg/io/dict/hashdict"
 	"github.com/gnames/gnsys"
 )
 
@@ -19,6 +21,8 @@ type Output struct {
 	sys   Sys
 	dat   *data.Data
 	genSp map[string][]string
+	// hd collects all words with their dictionary flags for gnfinder.
+	hd *hashdict.Builder
 }
 
 func NewOutput(cfg config.Config, sys Sys, dat *data.Data) (*Output, error) {
@@ -26,6 +30,7 @@ func NewOutput(cfg config.Config, sys Sys, dat *data.Data) (*Output, error) {
 		cfg: cfg,
 		sys: sys,
 		dat: dat,
+		hd:  hashdict.NewBuilder(),
 	}
 
 	dictDir := filepath.Join(cfg.CacheDir, "dict")
@@ -39,7 +44,9 @@ func NewOutput(cfg config.Config, sys Sys, dat *data.Data) (*Output, error) {
 		err = fmt.Errorf("-> gnsys.CleanDir: %w", err)
 		return nil, err
 	}
-	for _, v := range []string{"common", "in", "in-ambig", "not-in"} {
+	for _, v := range []string{
+		"common", "in", "in-ambig", "not-in", filepath.Dir(hashdict.Path),
+	} {
 		path := filepath.Join(dictDir, v)
 		err = gnsys.MakeDir(path)
 		if err != nil {
@@ -74,6 +81,12 @@ func (o *Output) Create() error {
 		return err
 	}
 
+	err = o.saveHashDict()
+	if err != nil {
+		err = fmt.Errorf("-> o.saveHashDict: %w", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -98,6 +111,8 @@ func (o *Output) uninomials() error {
 	for _, v := range [][]string{white, grey} {
 		slices.Sort(v)
 	}
+	o.addWords(white, hashdict.InUninomial)
+	o.addWords(grey, hashdict.InAmbigUninomial)
 	return o.saveUniOrSp(white, grey, "uninomials.csv")
 
 }
@@ -145,6 +160,9 @@ func (o *Output) genera() error {
 	for _, v := range [][]string{white, grey, greySp} {
 		sort.Strings(v)
 	}
+	o.addWords(white, hashdict.InGenus)
+	o.addWords(grey, hashdict.InAmbigGenus)
+	o.addWords(greySp, hashdict.InAmbigGenusSp)
 	return o.saveGen(white, grey, greySp)
 }
 
@@ -243,6 +261,8 @@ func (o *Output) species() error {
 	for _, v := range [][]string{white, grey} {
 		sort.Strings(v)
 	}
+	o.addWords(white, hashdict.InSpecies)
+	o.addWords(grey, hashdict.InAmbigSpecies)
 	return o.saveUniOrSp(white, grey, "species.csv")
 }
 
@@ -315,6 +335,9 @@ func (o *Output) fromData() error {
 	for _, v := range [][]string{com, blkUni, blkSp} {
 		sort.Strings(v)
 	}
+	o.addWords(com, hashdict.CommonWord)
+	o.addWords(blkSp, hashdict.NotInSpecies)
+	o.addWords(blkUni, hashdict.NotInUninomial)
 
 	return o.saveFromData(com, blkSp, blkUni)
 }
@@ -361,4 +384,40 @@ func (o *Output) saveStrings(path string, data []string) error {
 		return err
 	}
 	return nil
+}
+
+// addWords adds words from CSV lines to the hash dictionary. Only the first
+// column is used, the same way gnfinder used to read the CSV files.
+func (o *Output) addWords(lines []string, f hashdict.Flags) {
+	for _, v := range lines {
+		r := csv.NewReader(strings.NewReader(v))
+		row, err := r.Read()
+		if err != nil || strings.TrimSpace(row[0]) == "" {
+			continue
+		}
+		o.hd.AddWord(row[0], f)
+	}
+}
+
+// saveHashDict saves all words with their flags as one binary file. It is
+// copied to gnfinder as pkg/io/dict/data/hashdict/dict.bin.
+func (o *Output) saveHashDict() error {
+	d, err := o.hd.Build()
+	if err != nil {
+		err = fmt.Errorf("-> hashdict.Build: %w", err)
+		return err
+	}
+	f, err := os.Create(
+		filepath.Join(o.cfg.CacheDir, "dict", hashdict.Path),
+	)
+	if err != nil {
+		err = fmt.Errorf("-> os.Create: %w", err)
+		return err
+	}
+	if err = d.Save(f); err != nil {
+		_ = f.Close()
+		err = fmt.Errorf("-> hashdict.Save: %w", err)
+		return err
+	}
+	return f.Close()
 }
