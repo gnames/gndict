@@ -98,7 +98,14 @@ gndict works in three steps:
     | `common/eu.csv`               | common words of European languages |
 
     A word is ambiguous if it is a common word, or is shorter than 4
-    letters.
+    letters. Genera and uninomials are also ambiguous if they are listed in
+    `internal/ent/data/static/genera-grey.txt`. These are real genera that
+    in texts are mostly other words: places, people, journals, words of
+    some language, or capitalized species epithets (`Valle`, `Patricia`,
+    `Rhodora`, `Rosea`). The list was made from names found in the
+    Biodiversity Heritage Library: genera that were found at least 1000
+    times, and less than 10% of the time with a species epithet. Unlike
+    common words, they do not make species epithets ambiguous.
 
     Uninomials that are also authors' names and are weakly supported (come
     from one reliable data source, only from ION, or are known only as

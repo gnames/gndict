@@ -117,7 +117,7 @@ func (o *Output) uninomials() error {
 			o.notInUni = append(o.notInUni, strings.ToLower(name))
 			continue
 		}
-		if isWeak || o.isGreyWord(name) {
+		if isWeak || o.isGreyGenus(name) {
 			grey = append(grey, v)
 		} else {
 			white = append(white, v)
@@ -190,7 +190,7 @@ func (o *Output) genera() error {
 		if o.uninomialProblems(name) {
 			continue
 		}
-		if o.isGreyWord(name) {
+		if o.isGreyGenus(name) {
 			grey = append(grey, v)
 		} else {
 			white = append(white, v)
@@ -339,6 +339,15 @@ func (o *Output) speciesProblems(sp string) bool {
 		}
 	}
 	return false
+}
+
+// isGreyGenus is true for genera and uninomials that are ambiguous: common
+// words, short words, or genera that are mostly used as other words.
+func (o *Output) isGreyGenus(word string) bool {
+	if _, ok := o.dat.GenGrey[word]; ok {
+		return true
+	}
+	return o.isGreyWord(word)
 }
 
 func (o *Output) isGreyWord(word string) bool {

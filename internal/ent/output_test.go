@@ -33,9 +33,15 @@ func newFakeSys() fakeSys {
 			"Missouri,true,false", "Monterosato,false,false",
 			"Winckworth,false,true",
 		},
-		"genera.csv":     {"Plantago,40", "America,3", `"Odd,Name",1`},
-		"species.csv":    {"plantaginea,7", "amabilis,4", "all,2"},
-		"canonicals.csv": {"America amabilis", "Plantago major"},
+		"genera.csv": {
+			"Plantago,40", "America,3", `"Odd,Name",1`, "Rosea,2",
+		},
+		"species.csv": {
+			"plantaginea,7", "amabilis,4", "all,2", "rosea,90",
+		},
+		"canonicals.csv": {
+			"America amabilis", "Plantago major", "Rosea mollis",
+		},
 	}
 }
 
@@ -78,6 +84,12 @@ func TestHashDict(t *testing.T) {
 		{"America", hashdict.InAmbigGenus},
 		{"America amabilis", hashdict.InAmbigGenusSp},
 		{"america", hashdict.CommonWord},
+		// Rosea is a real genus, but in texts it is mostly a capitalized
+		// epithet, so it is an ambiguous genus
+		{"Rosea", hashdict.InAmbigGenus},
+		{"Rosea mollis", hashdict.InAmbigGenusSp},
+		// the epithet stays unambiguous
+		{"rosea", hashdict.InSpecies},
 		// only the first CSV column is a word
 		{"Odd,Name", hashdict.InGenus},
 	}
@@ -86,6 +98,8 @@ func TestHashDict(t *testing.T) {
 	}
 	assert.False(d.Lookup("Plantago").Has(hashdict.CommonWord))
 	assert.False(d.Lookup("Monterosato").Has(hashdict.InUninomial))
+	assert.False(d.Lookup("Rosea").Has(hashdict.InGenus))
+	assert.False(d.Lookup("rosea").Has(hashdict.InAmbigSpecies))
 	assert.Equal(hashdict.Flags(0), d.Lookup("Missouri"))
 	assert.Equal(hashdict.Flags(0), d.Lookup("Notawordatall"))
 	assert.Equal(hashdict.Flags(0), d.Lookup(""))
