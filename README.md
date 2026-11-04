@@ -106,9 +106,12 @@ gndict works in three steps:
     Biodiversity Heritage Library: genera that were found at least 1000
     times, and less than 10% of the time with a species epithet. It also
     has genera known only from EOL that are frequent species epithets
-    (`Fusca`, `Occidentale`), or are mostly found alone in BHL (`Called`,
-    `Caterpillars`, `Hongkong`). Unlike common words, the list does not
-    make species epithets ambiguous.
+    and start binomials, many of them are misspelled genera (`Tardus` for
+    `Turdus`). Unlike common words, the list does not make species
+    epithets ambiguous. Words known only from EOL that are not taxa at
+    all (`Called`, `Caterpillars`, `Blackfly`), or are capitalized
+    epithets without binomials (`Fusca`, `Occidentale`), are in
+    `uninomials-black.txt`.
 
     Uninomials that are also authors' names and are weakly supported (come
     from one reliable data source, only from ION, or are known only as
