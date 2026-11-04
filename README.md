@@ -104,8 +104,11 @@ gndict works in three steps:
     some language, or capitalized species epithets (`Valle`, `Patricia`,
     `Rhodora`, `Rosea`). The list was made from names found in the
     Biodiversity Heritage Library: genera that were found at least 1000
-    times, and less than 10% of the time with a species epithet. Unlike
-    common words, they do not make species epithets ambiguous.
+    times, and less than 10% of the time with a species epithet. It also
+    has genera known only from EOL that are frequent species epithets
+    (`Fusca`, `Occidentale`), or are mostly found alone in BHL (`Called`,
+    `Caterpillars`, `Hongkong`). Unlike common words, the list does not
+    make species epithets ambiguous.
 
     Uninomials that are also authors' names and are weakly supported (come
     from one reliable data source, only from ION, or are known only as

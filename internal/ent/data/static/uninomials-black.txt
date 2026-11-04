@@ -68,6 +68,7 @@ anatomy
 ancho
 and
 anderson
+angiospermia
 animal
 annals
 annulus
@@ -422,6 +423,7 @@ croco
 crocodile
 croizat
 crust
+cryptogamia
 cryptogams
 cs
 ct
@@ -457,6 +459,8 @@ dc
 dd
 de
 dead
+decagynia
+decandria
 deciduous
 deepwater
 definition
@@ -476,18 +480,23 @@ df
 dg
 dh
 di
+diadelphia
 diagram
 diagrama
+diandria
 diane
 diatom
 didelphid
+didynamia
 diels
 diet
 dietary
 differential
 digitigrade
+digynia
 dilatatum
 dioc
+dioecia
 diplo
 disas
 dissociation
@@ -501,6 +510,8 @@ dm
 dn
 dna
 do
+dodecagynia
+dodecandria
 domin
 dominance
 dominium
@@ -580,6 +591,7 @@ encapsulate
 endlicher
 engelmann
 england
+enneandria
 enteric
 envelope
 environmental
@@ -811,6 +823,8 @@ gv
 gw
 gx
 gy
+gymnospermia
+gynandria
 gz
 ha
 habits
@@ -844,6 +858,8 @@ helps
 helton
 hema
 hemi
+heptagynia
+heptandria
 herbivorous
 hermit
 hertel
@@ -853,6 +869,8 @@ heteromeri
 heterosis
 hewson
 hexacoralla
+hexagynia
+hexandria
 hf
 hg
 hh
@@ -923,6 +941,7 @@ ice
 icelandic
 ichth
 ichthyosaur
+icosandria
 id
 identification
 ie
@@ -1274,10 +1293,14 @@ molecular
 mollissima
 mollusc
 monad
+monadelphia
+monandria
 monarch
 moneda
 monin
 mono
+monoecia
+monogynia
 monster
 monta
 montagna
@@ -1396,6 +1419,8 @@ nz
 ob
 obsolete
 oc
+octandria
+octogynia
 od
 odoriferous
 oe
@@ -1511,6 +1536,8 @@ pelican
 pelvis
 pema
 pennate
+pentagynia
+pentandria
 pentre
 peptide
 perennial
@@ -1567,6 +1594,10 @@ poc
 poch
 poches
 policies
+polyadelphia
+polyandria
+polygamia
+polygynia
 polymorphous
 pomel
 pond
@@ -1927,6 +1958,7 @@ sx
 sy
 syllabus
 sym
+syngenesia
 synonyms
 synthetic
 systema
@@ -1959,6 +1991,9 @@ terrestrial
 test
 tetracycline
 tetrads
+tetradynamia
+tetragynia
+tetrandria
 tf
 tg
 th
@@ -2017,7 +2052,9 @@ traub
 tree
 trematode
 trevisan
+triandria
 tribe
+trigynia
 trilobite
 trimen
 triungulin
