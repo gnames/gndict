@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -21,6 +22,9 @@ type Output struct {
 	sys   Sys
 	dat   *data.Data
 	genSp map[string][]string
+	// notInUni are uninomials found to be false positives during the run.
+	// They are saved together with the uninomials blacklist.
+	notInUni []string
 	// hd collects all words with their dictionary flags for gnfinder.
 	hd *hashdict.Builder
 }
@@ -107,7 +111,13 @@ func (o *Output) uninomials() error {
 		if o.uninomialProblems(name) {
 			continue
 		}
-		if _, ok := weak[name]; ok || o.isGreyWord(name) {
+		wsOnly, isWeak := weak[name]
+		if wsOnly {
+			// gnfinder checks the blacklist with lowercased words
+			o.notInUni = append(o.notInUni, strings.ToLower(name))
+			continue
+		}
+		if isWeak || o.isGreyWord(name) {
 			grey = append(grey, v)
 		} else {
 			white = append(white, v)
@@ -123,15 +133,26 @@ func (o *Output) uninomials() error {
 }
 
 // weakUninomials returns weakly supported uninomials that are also used as
-// authors' names. They are saved as ambiguous uninomials.
-func (o *Output) weakUninomials() (map[string]struct{}, error) {
-	lines, err := o.sys.ReadFile("uninomials-weak.txt")
+// authors' names. The value is true if a name comes only from Wikispecies.
+// Such names are nearly always false positives (places, people, section
+// headers), so they are saved as never being uninomials. Other weak names
+// are saved as ambiguous uninomials.
+func (o *Output) weakUninomials() (map[string]bool, error) {
+	lines, err := o.sys.ReadFile("uninomials-weak.csv")
 	if err != nil {
 		return nil, err
 	}
-	res := make(map[string]struct{}, len(lines))
+	res := make(map[string]bool, len(lines))
 	for _, v := range lines {
-		res[v] = struct{}{}
+		i := strings.LastIndex(v, ",")
+		if i < 0 {
+			return nil, fmt.Errorf("wrong weak uninomial line: %q", v)
+		}
+		wsOnly, err := strconv.ParseBool(v[i+1:])
+		if err != nil {
+			return nil, fmt.Errorf("wrong weak uninomial line %q: %w", v, err)
+		}
+		res[v[:i]] = wsOnly
 	}
 	return res, nil
 }
@@ -344,11 +365,14 @@ func (o *Output) fromData() error {
 		i++
 	}
 
-	blkUni := make([]string, len(o.dat.UniBlack))
-	i = 0
+	blkUni := make([]string, 0, len(o.dat.UniBlack)+len(o.notInUni))
 	for k := range o.dat.UniBlack {
-		blkUni[i] = k
-		i++
+		blkUni = append(blkUni, k)
+	}
+	for _, v := range o.notInUni {
+		if _, ok := o.dat.UniBlack[v]; !ok {
+			blkUni = append(blkUni, v)
+		}
 	}
 
 	for _, v := range [][]string{com, blkUni, blkSp} {
