@@ -8,9 +8,6 @@ import (
 //go:embed static/common-eu-words.txt
 var common string
 
-//go:embed static/ion-names.txt
-var ion string
-
 //go:embed static/species-black.txt
 var spBlack string
 
@@ -18,14 +15,13 @@ var spBlack string
 var uniBlack string
 
 type Data struct {
-	Common, ION, SpBlack, UniBlack map[string]struct{}
-	GenSp                          map[string][]string
+	Common, SpBlack, UniBlack map[string]struct{}
+	GenSp                     map[string][]string
 }
 
 func New() *Data {
 	return &Data{
 		Common:   toMap(common),
-		ION:      toMap(ion),
 		SpBlack:  toMap(spBlack),
 		UniBlack: toMap(uniBlack),
 	}

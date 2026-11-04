@@ -26,7 +26,7 @@ func New(
 }
 
 func (d *gndict) Download() error {
-	return d.Downloader.Download(d.dat)
+	return d.Downloader.Download()
 }
 
 func (d *gndict) Preprocess() error {

@@ -25,7 +25,9 @@ ambiguous genus-species combinations, common words, and words that are
 never parts of names.
 
 gndict creates them from names in the GNverifier database and the genera
-of IRMNG. All dictionaries are combined in one binary file, `dict.bin`,
+of IRMNG. Names come from curated sources, GBIF, EOL, Ruhoff 1980 and ION.
+ION contains many unique names, as well as OCR and human errors. Such
+errors repeat in texts, so finding them is useful. All dictionaries are combined in one binary file, `dict.bin`,
 which GNfinder embeds into its executable. Every word is stored there as a
 64-bit hash with flags that tell which dictionaries contain it. The file
 format is described in the `pkg/io/dict/hashdict` package of GNfinder.

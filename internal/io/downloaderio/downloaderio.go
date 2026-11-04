@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	"github.com/gnames/gndict/internal/ent"
-	"github.com/gnames/gndict/internal/ent/data"
 	"github.com/gnames/gndict/pkg/config"
 	"github.com/gnames/gnsys"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +22,9 @@ var (
 
 	// wikispeciesID is the ID of Wikispecies data source in GNverifier.
 	wikispeciesID = 2
+
+	// ionID is the ID of ION data source in GNverifier.
+	ionID = 168
 )
 
 type downloaderio struct {
@@ -50,13 +52,13 @@ func (d *downloaderio) Close() error {
 	return d.db.Close(context.Background())
 }
 
-func (d *downloaderio) Download(dat *data.Data) error {
+func (d *downloaderio) Download() error {
 	var err error
 	if !d.cfg.ForceDownload && d.downloadHappened() {
 		log.Info().Msg("Download of names is already done, skipping...")
 	} else {
 		log.Info().Msg("Starting creation of the names dump.")
-		err = d.getNames(dat)
+		err = d.getNames()
 		if err != nil {
 			return err
 		}
@@ -174,7 +176,12 @@ SELECT u.name, u.wikispecies_only
 	return nil
 }
 
-func (d *downloaderio) getNames(dat *data.Data) error {
+// getNames saves canonical forms of names from reliable sources and from
+// ION. ION names come from many people and contain unique names, as well
+// as OCR and human errors. Such errors repeat in texts, so they are useful
+// for finding names. ION is not used for other downloads, because it would
+// make weakly supported names look supported.
+func (d *downloaderio) getNames() error {
 	names := make(map[string]struct{})
 	path := filepath.Join(d.cfg.CacheDir, "names.txt")
 	f, err := os.Create(path)
@@ -195,8 +202,9 @@ func (d *downloaderio) getNames(dat *data.Data) error {
 			OR nsi.data_source_id = 11
 			OR nsi.data_source_id = 12
 			OR nsi.data_source_id = 206
+			OR nsi.data_source_id = $1
 `
-	rows, err := d.db.Query(context.Background(), q)
+	rows, err := d.db.Query(context.Background(), q, ionID)
 	if err != nil {
 		return err
 	}
@@ -209,9 +217,8 @@ func (d *downloaderio) getNames(dat *data.Data) error {
 		}
 		names[name] = struct{}{}
 	}
-
-	for k := range dat.ION {
-		names[k] = struct{}{}
+	if err = rows.Err(); err != nil {
+		return err
 	}
 
 	namesAry := make([]string, len(names))
