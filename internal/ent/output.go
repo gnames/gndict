@@ -133,10 +133,11 @@ func (o *Output) uninomials() error {
 }
 
 // weakUninomials returns weakly supported uninomials that are also used as
-// authors' names. The value is true if a name comes only from Wikispecies.
-// Such names are nearly always false positives (places, people, section
-// headers), so they are saved as never being uninomials. Other weak names
-// are saved as ambiguous uninomials.
+// authors' names, including names known only from ION. The value is true
+// if Wikispecies is the only reliable source of a name. Such names are
+// nearly always false positives (places, people, section headers), so they
+// are saved as never being uninomials. Other weak names are saved as
+// ambiguous uninomials.
 func (o *Output) weakUninomials() (map[string]bool, error) {
 	lines, err := o.sys.ReadFile("uninomials-weak.csv")
 	if err != nil {
@@ -144,15 +145,18 @@ func (o *Output) weakUninomials() (map[string]bool, error) {
 	}
 	res := make(map[string]bool, len(lines))
 	for _, v := range lines {
-		i := strings.LastIndex(v, ",")
-		if i < 0 {
-			return nil, fmt.Errorf("wrong weak uninomial line: %q", v)
+		// name,wikispecies_only,ion_only
+		fields := strings.Split(v, ",")
+		if len(fields) != 3 {
+			return nil, fmt.Errorf(
+				"wrong weak uninomial line %q, download it again with -r", v,
+			)
 		}
-		wsOnly, err := strconv.ParseBool(v[i+1:])
+		wsOnly, err := strconv.ParseBool(fields[1])
 		if err != nil {
 			return nil, fmt.Errorf("wrong weak uninomial line %q: %w", v, err)
 		}
-		res[v[:i]] = wsOnly
+		res[fields[0]] = wsOnly
 	}
 	return res, nil
 }

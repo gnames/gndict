@@ -90,13 +90,14 @@ func (d *downloaderio) Download() error {
 // also used as authors' names. They are often artifacts: an author in
 // parentheses parsed as a subgenus (`Anisocycla (Monterosato)`), or a place
 // or a person in a data source (`Missouri`). A name is weakly supported if
-// it comes from only one data source, or never starts a name-string (it is
-// known only as a subgenus).
+// it comes from at most one reliable data source (names only from ION have
+// none), or never starts a name-string (it is known only as a subgenus).
 //
-// Every line of the file is `name,wikispecies_only`, where wikispecies_only
-// is true if the name comes only from Wikispecies. Such names are mostly
-// artifacts of Wikispecies dump, where places, people and section headers
-// can be entered as names.
+// Every line of the file is `name,wikispecies_only,ion_only`.
+// wikispecies_only is true if Wikispecies is the only reliable source of
+// a name. Such names are mostly artifacts of Wikispecies dump, where places,
+// people and section headers can be entered as names. ion_only is true if
+// a name comes only from ION.
 func (d *downloaderio) getWeakUninomials() error {
 	// the file is written under a temporary name, so a failed download does
 	// not leave a file that would be taken for a finished one.
@@ -110,54 +111,65 @@ func (d *downloaderio) getWeakUninomials() error {
 		_ = f.Close()
 		_ = os.Remove(tmp)
 	}()
+	// candidates are one-word canonicals that are also authors' words, it is
+	// much faster than to check all uninomials.
 	q := `
-WITH uni AS (
-  SELECT c.name,
-    count(DISTINCT nsi.data_source_id) AS sources,
-    count(DISTINCT nsi.data_source_id) FILTER (
-      WHERE ns.name = c.name OR ns.name LIKE c.name || ' %'
-    ) AS head_sources,
-    bool_and(nsi.data_source_id = $1) AS wikispecies_only
-  FROM canonicals c
+WITH cand AS (
+  SELECT c.id, c.name
+    FROM canonicals c
+    WHERE position(' ' in c.name) = 0
+      AND EXISTS (
+        SELECT 1 FROM words w
+          -- type 4 is an author word
+          WHERE w.normalized = c.name AND w.type_id = 4
+      )
+), src AS (
+  SELECT c.name, nsi.data_source_id AS ds_id,
+    (ds.is_curated OR nsi.data_source_id IN (11, 12, 206)) AS reliable,
+    (ns.name = c.name OR ns.name LIKE c.name || ' %') AS head
+  FROM cand c
     JOIN name_strings ns ON ns.canonical_id = c.id
     JOIN name_string_indices nsi ON nsi.name_string_id = ns.id
     JOIN data_sources ds ON ds.id = nsi.data_source_id
-  WHERE (ds.is_curated = true
-      OR nsi.data_source_id = 11
-      OR nsi.data_source_id = 12
-      OR nsi.data_source_id = 206)
-    AND position(' ' in c.name) = 0
-  GROUP BY c.name
+  WHERE ds.is_curated
+    OR nsi.data_source_id IN (11, 12, 206, $2)
+), uni AS (
+  SELECT name,
+    count(DISTINCT ds_id) FILTER (WHERE reliable) AS sources,
+    count(DISTINCT ds_id) FILTER (WHERE reliable AND head) AS head_sources,
+    coalesce(bool_and(ds_id = $1) FILTER (WHERE reliable), false)
+      AS wikispecies_only,
+    bool_and(ds_id = $2) AS ion_only
+  FROM src
+  GROUP BY name
 )
-SELECT u.name, u.wikispecies_only
-  FROM uni u
-  WHERE (u.sources = 1 OR u.head_sources = 0)
-    AND EXISTS (
-      SELECT 1 FROM words w
-        -- type 4 is an author word
-        WHERE w.normalized = u.name AND w.type_id = 4
-    )
-  ORDER BY u.name`
-	rows, err := d.db.Query(context.Background(), q, wikispeciesID)
+SELECT name, wikispecies_only, ion_only
+  FROM uni
+  WHERE sources <= 1 OR head_sources = 0
+  ORDER BY name`
+	rows, err := d.db.Query(context.Background(), q, wikispeciesID, ionID)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	var name string
-	var wsOnly bool
-	var count, wsCount int
+	var wsOnly, ionOnly bool
+	var count, wsCount, ionCount int
 	for rows.Next() {
-		err = rows.Scan(&name, &wsOnly)
+		err = rows.Scan(&name, &wsOnly, &ionOnly)
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintf(f, "%s,%t\n", name, wsOnly)
+		_, err = fmt.Fprintf(f, "%s,%t,%t\n", name, wsOnly, ionOnly)
 		if err != nil {
 			return err
 		}
 		count++
 		if wsOnly {
 			wsCount++
+		}
+		if ionOnly {
+			ionCount++
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -170,8 +182,8 @@ SELECT u.name, u.wikispecies_only
 		return err
 	}
 	log.Info().Msgf(
-		"Downloaded %d weak uninomials, %d of them only from Wikispecies.",
-		count, wsCount,
+		"Downloaded %d weak uninomials, %d only from Wikispecies, %d only from ION.",
+		count, wsCount, ionCount,
 	)
 	return nil
 }

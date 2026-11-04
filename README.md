@@ -101,8 +101,8 @@ gndict works in three steps:
     letters.
 
     Uninomials that are also authors' names and are weakly supported (come
-    from one data source, or are known only as subgenera) are often
-    artifacts. They are listed in `uninomials-weak.csv` in the cache
+    from one reliable data source, only from ION, or are known only as
+    subgenera) are often artifacts. They are listed in `uninomials-weak.csv` in the cache
     directory. If such a name comes only from Wikispecies, it is nearly
     always a place, a person or a section header, so it goes to
     `not-in/uninomials.csv`. Other weak names are ambiguous uninomials.

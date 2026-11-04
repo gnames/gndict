@@ -27,11 +27,15 @@ func newFakeSys() fakeSys {
 	return fakeSys{
 		"uninomials.csv": {
 			"Plantaginaceae,12", "Minimi,1", "Monterosato,1", "Missouri,1",
+			"Winckworth,1",
 		},
-		"uninomials-weak.csv": {"Missouri,true", "Monterosato,false"},
-		"genera.csv":          {"Plantago,40", "America,3", `"Odd,Name",1`},
-		"species.csv":         {"plantaginea,7", "amabilis,4", "all,2"},
-		"canonicals.csv":      {"America amabilis", "Plantago major"},
+		"uninomials-weak.csv": {
+			"Missouri,true,false", "Monterosato,false,false",
+			"Winckworth,false,true",
+		},
+		"genera.csv":     {"Plantago,40", "America,3", `"Odd,Name",1`},
+		"species.csv":    {"plantaginea,7", "amabilis,4", "all,2"},
+		"canonicals.csv": {"America amabilis", "Plantago major"},
 	}
 }
 
@@ -67,6 +71,8 @@ func TestHashDict(t *testing.T) {
 		// weakly supported author's name only from Wikispecies is never
 		// a uninomial, gnfinder checks it lowercased
 		{"missouri", hashdict.NotInUninomial},
+		// author's name known only from ION is an ambiguous uninomial
+		{"Winckworth", hashdict.InAmbigUninomial},
 		{"plantaginea", hashdict.InSpecies},
 		// America is a common word, so it is an ambiguous genus
 		{"America", hashdict.InAmbigGenus},
@@ -122,4 +128,15 @@ func TestHashDictMatchesCSV(t *testing.T) {
 	assert.Equal(t, d.Len(), fromCSV.Len())
 	assert.Equal(t, buf2.Bytes(), buf1.Bytes(),
 		"binary and CSV dictionaries differ")
+}
+
+func TestWeakUninomialsOldFormat(t *testing.T) {
+	fs := newFakeSys()
+	fs["uninomials-weak.csv"] = []string{"Missouri,true"}
+	cfg := config.New(config.OptCacheDir(t.TempDir()))
+	o, err := NewOutput(cfg, fs, data.New())
+	require.NoError(t, err)
+	err = o.Create()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "-r")
 }
