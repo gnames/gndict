@@ -125,14 +125,14 @@ WITH cand AS (
       )
 ), src AS (
   SELECT c.name, nsi.data_source_id AS ds_id,
-    (ds.is_curated OR nsi.data_source_id IN (11, 12, 206)) AS reliable,
+    (ds.is_curated OR nsi.data_source_id IN (11, 12, 13, 206)) AS reliable,
     (ns.name = c.name OR ns.name LIKE c.name || ' %') AS head
   FROM cand c
     JOIN name_strings ns ON ns.canonical_id = c.id
     JOIN name_string_indices nsi ON nsi.name_string_id = ns.id
     JOIN data_sources ds ON ds.id = nsi.data_source_id
   WHERE ds.is_curated
-    OR nsi.data_source_id IN (11, 12, 206, $2)
+    OR nsi.data_source_id IN (11, 12, 13, 206, $2)
 ), uni AS (
   SELECT name,
     count(DISTINCT ds_id) FILTER (WHERE reliable) AS sources,
@@ -213,6 +213,7 @@ func (d *downloaderio) getNames() error {
 	    WHERE ds.is_curated = true
 			OR nsi.data_source_id = 11
 			OR nsi.data_source_id = 12
+			OR nsi.data_source_id = 13
 			OR nsi.data_source_id = 206
 			OR nsi.data_source_id = $1
 `
